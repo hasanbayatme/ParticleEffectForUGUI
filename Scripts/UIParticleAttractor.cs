@@ -1,13 +1,41 @@
 ﻿using System;
+
 using Coffee.UIParticleExtensions;
+
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Coffee.UIExtensions
 {
+
+    public class ParticleAttractedEventArgs : EventArgs
+    {
+
+        public readonly ParticleSystem ParticleSystem;
+        public readonly int Index;
+        public readonly ParticleSystem.Particle Particle;
+
+        public ParticleAttractedEventArgs(ParticleSystem particleSystem, int index, ParticleSystem.Particle particle)
+        {
+            this.ParticleSystem = particleSystem;
+            this.Index = index;
+            this.Particle = particle;
+        }
+
+    }
+
     [ExecuteAlways]
     public class UIParticleAttractor : MonoBehaviour
     {
+
+        #region Events
+
+        public event EventHandler<ParticleAttractedEventArgs> Attracted;
+
+        #endregion
+
+        #region Definitions
+
         public enum Movement
         {
             Linear,
@@ -20,6 +48,10 @@ namespace Coffee.UIExtensions
             Normal,
             UnscaledTime
         }
+
+        #endregion
+
+        #region Fields
 
         [SerializeField]
         private ParticleSystem m_ParticleSystem;
@@ -46,6 +78,10 @@ namespace Coffee.UIExtensions
         private UnityEvent m_OnAttracted;
 
         private UIParticle _uiParticle;
+
+        #endregion
+
+        #region Properties
 
         public float destinationRadius
         {
@@ -97,6 +133,10 @@ namespace Coffee.UIExtensions
             }
         }
 
+        #endregion
+
+        #region Unity Messages
+
         private void OnEnable()
         {
             ApplyParticleSystem();
@@ -113,6 +153,10 @@ namespace Coffee.UIExtensions
             _uiParticle = null;
             m_ParticleSystem = null;
         }
+
+        #endregion
+
+        #region Internal Methods
 
         internal void Attract()
         {
@@ -134,17 +178,7 @@ namespace Coffee.UIExtensions
                     p.remainingLifetime = 0f;
                     particles[i] = p;
 
-                    if (m_OnAttracted != null)
-                    {
-                        try
-                        {
-                            m_OnAttracted.Invoke();
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogException(e);
-                        }
-                    }
+                    OnAttracted(i, p);
 
                     continue;
                 }
@@ -164,6 +198,38 @@ namespace Coffee.UIExtensions
             }
 
             m_ParticleSystem.SetParticles(particles, count);
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void OnAttracted(int index, ParticleSystem.Particle particle)
+        {
+            if (m_OnAttracted != null)
+            {
+                try
+                {
+                    m_OnAttracted.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
+
+            if (Attracted != null)
+            {
+                try
+                {
+                    var e = new ParticleAttractedEventArgs(m_ParticleSystem, index, particle);
+                    Attracted?.Invoke(this, e);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
         }
 
         private Vector3 GetDestinationPosition()
@@ -254,5 +320,9 @@ namespace Coffee.UIExtensions
                 _uiParticle = null;
             }
         }
+
+        #endregion
+
     }
+
 }
